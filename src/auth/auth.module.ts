@@ -8,11 +8,12 @@ import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports:[PrismaModule,
     JwtModule.register({
-      secret:'secret',
+      secret:'secretkey',
       signOptions:{expiresIn:'1d'}
     })
   ],
   controllers: [AuthController],
   providers: [ JwtStrategy,AuthService],
+  exports:[JwtModule]
 })
 export class AuthModule {}
