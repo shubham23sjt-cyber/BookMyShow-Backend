@@ -1,0 +1,202 @@
+### BookMyShow API Integration Test Suite
+# This file is compatible with the VS Code "REST Client" extension or can be imported/recreated in Postman / Thunder Client.
+
+@baseUrl = http://localhost:3000
+
+# ==========================================
+# 1. AUTHENTICATION & USER MANAGEMENT
+# ==========================================
+
+### 1a. Register an Admin User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Super Admin",
+  "email": "admin@bookmyshow.com",
+  "password": "securepassword123",
+  "role": "ADMIN"
+}
+
+### 1b. Login as Admin (Copy the access token returned here to the variables section below)
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@bookmyshow.com",
+  "password": "securepassword123"
+}
+
+###
+
+@adminToken = {{adminLogin.response.body.accessToken}}
+
+### 1c. Register a Standard User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@gmail.com",
+  "password": "userpassword123",
+  "role": "USER"
+}
+
+### 1d. Login as Standard User (Copy the access token returned here to the variables section below)
+# @name userLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "jane@gmail.com",
+  "password": "userpassword123"
+}
+
+###
+
+@userToken = {{userLogin.response.body.accessToken}}
+
+
+# ==========================================
+# 2. EVENTS, VENUES & SHOWS (ADMIN ONLY)
+# ==========================================
+
+### 2a. Create a Venue (Admin Only)
+# @name createVenue
+POST {{baseUrl}}/venue
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "PVR Director's Cut",
+  "city": "Delhi",
+  "address": "Ambience Mall, Vasant Kunj"
+}
+
+###
+
+@venueId = {{createVenue.response.body.id}}
+
+### 2b. Create an Event (Admin Only)
+# @name createEvent
+POST {{baseUrl}}/event
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Inception (Re-Release)",
+  "description": "A thief who steals corporate secrets through the use of dream-sharing technology...",
+  "type": "MOVIE",
+  "duration": 148
+}
+
+###
+
+@eventId = {{createEvent.response.body.id}}
+
+### 2c. Create/Schedule a Show (Admin Only)
+# @name createShow
+POST {{baseUrl}}/show
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "eventId": "{{eventId}}",
+  "venueId": "{{venueId}}",
+  "startTime": "2026-06-01T18:30:00.000Z"
+}
+
+###
+
+@showId = {{createShow.response.body.id}}
+
+### 2d. Generate Seats for the Show (Admin Only)
+POST {{baseUrl}}/seats/{{showId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "vipPrice": 120.0,
+  "premiumPrice": 85.0,
+  "standardPrice": 55.0,
+  "vipCount": 10,
+  "premiumCount": 20,
+  "standardCount": 30
+}
+
+
+# ==========================================
+# 3. SEATS & BOOKING FLOW (USER SECTOR)
+# ==========================================
+
+### 3a. Get/List Events (Public - with optional filters)
+GET {{baseUrl}}/event?city=Delhi&type=MOVIE
+
+### 3b. Find Shows scheduled for the Event
+GET {{baseUrl}}/show/event/{{eventId}}
+
+### 3c. Fetch Seats and Availability for the Show
+# @name getSeats
+GET {{baseUrl}}/seats/{{showId}}
+Authorization: Bearer {{userToken}}
+
+###
+
+# Grab two seat IDs from the seat generation response or the getSeats request
+@seatId1 = {{getSeats.response.body[0].id}}
+@seatId2 = {{getSeats.response.body[1].id}}
+
+### 3d. Hold Seats (User locks the seats temporarily)
+POST {{baseUrl}}/seats/hold/{{showId}}
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "seatIds": ["{{seatId1}}", "{{seatId2}}"]
+}
+
+### 3e. Confirm Booking (Create booking for held seats)
+# @name createBooking
+POST {{baseUrl}}/booking
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "showId": "{{showId}}",
+  "seatIds": ["{{seatId1}}", "{{seatId2}}"]
+}
+
+###
+
+@bookingId = {{createBooking.response.body.bookingId}}
+
+### 3f. View My Bookings History
+GET {{baseUrl}}/booking/my-bookings
+Authorization: Bearer {{userToken}}
+
+### 3g. View Specific Booking Details
+GET {{baseUrl}}/booking/{{bookingId}}
+Authorization: Bearer {{userToken}}
+
+
+# ==========================================
+# 4. SYSTEM ADMINISTRATION & ANALYTICS
+# ==========================================
+
+### 4a. Get Revenue Analytics (Admin Only)
+GET {{baseUrl}}/admin/analytics/revenue
+Authorization: Bearer {{adminToken}}
+
+### 4b. Get Occupancy Analytics (Admin Only)
+GET {{baseUrl}}/admin/analytics/occupancy
+Authorization: Bearer {{adminToken}}
+
+
+# ==========================================
+# 5. CANCELLATION FLOW (OPTIONAL)
+# ==========================================
+
+### 5a. Cancel Booking (User cancels confirmed booking)
+DELETE {{baseUrl}}/booking/{{bookingId}}/cancel
+Authorization: Bearer {{userToken}}

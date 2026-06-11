@@ -1,0 +1,15 @@
+node_modules
+dist
+npm-debug.log
+.git
+.gitignore
+.env
+.prettierrc
+eslint.config.mjs
+tsconfig.build.json
+tsconfig.json
+nest-cli.json
+Dockerfile
+docker-compose.yml
+.vscode
+.antigravitycli

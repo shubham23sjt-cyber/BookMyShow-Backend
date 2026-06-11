@@ -9,66 +9,121 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url=env("DATABASE_URL")
- 
+  url      = env("DATABASE_URL")
 }
 
-model User{
-  id      String    @id @default(uuid())
-  email   String    @unique
+enum EventType {
+  MOVIE
+  CONCERT
+  SPORT
+  THEATRE
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
   password  String
   name      String
-  createdAt DateTime  @default(now())
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
 
   bookings Booking[]
+  holds    SeatHold[]
 }
 
-model Movie{
-  id    String    @id@default(uuid())
-  title String  
-  duration  Int
+model Event {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  type        EventType
+  duration    Int?      // Duration in minutes (optional for sports/concerts)
   createdAt   DateTime  @default(now())
 
   shows Show[]
 }
 
-model Show{
-  id      String  @id @default(uuid())
-  movieId   String
+model Venue {
+  id        String   @id @default(uuid())
+  name      String
+  city      String
+  address   String
+  createdAt DateTime @default(now())
+
+  shows Show[]
+}
+
+model Show {
+  id        String   @id @default(uuid())
+  eventId   String
+  venueId   String
   startTime DateTime
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  movie Movie @relation(fields:[movieId],references:[id])
-  bookings  Booking[]
-  seats   Seat[] 
+  event    Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venue    Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+  seats    Seat[]
+  holds    SeatHold[]
 }
 
-model Seat{
-  id String @id  @default(uuid())
-  showId  String
-  number    String
+model Seat {
+  id       String @id @default(uuid())
+  showId   String
+  number   String // e.g., "A1", "B5"
+  category String // e.g., "VIP", "Premium", "Standard"
+  price    Float
 
-  show  Show  @relation(fields:[showId],references:[id])
+  show         Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
   bookingSeats BookingSeat[]
+  holds        SeatHold[]
 }
 
-model Booking{
-  id String @id   @default(uuid())
-  userId    String
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Booking {
+  id         String        @id @default(uuid())
+  userId     String
+  showId     String
+  totalPrice Float         @default(0.0)
+  status     BookingStatus @default(CONFIRMED)
+  createdAt  DateTime      @default(now())
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show  Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
+  seats BookingSeat[]
+}
+
+model BookingSeat {
+  id        String  @id @default(uuid())
+  bookingId String
+  seatId    String
   showId    String
-  createdAt   DateTime  @default(now())
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat      Seat    @relation(fields: [seatId], references: [id], onDelete: Cascade)
 
-  user    User    @relation(fields:[userId],references:[id])
-  show    Show    @relation(fields:[showId],references:[id])
-  seats   BookingSeat[]
+  @@unique([seatId, showId])
 }
-model BookingSeat{
-  id    String    @id @default(uuid())
-  bookingId   String
-  seatId      String
-  showId      String
-  booking   Booking @relation(fields:[bookingId],references:[id])
-  seat      Seat    @relation(fields:[seatId],references:[id])
 
-  @@unique([seatId,showId])
+model SeatHold {
+  id        String   @id @default(uuid())
+  showId    String
+  seatId    String
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  show Show @relation(fields: [showId], references: [id], onDelete: Cascade)
+  seat Seat @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seatId, showId])
 }
