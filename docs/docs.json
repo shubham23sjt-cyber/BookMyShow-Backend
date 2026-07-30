@@ -1,0 +1,22 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "BookMyShow Backend",
+  "theme": "mint",
+  "colors": {
+    "primary": "#E50914"
+  },
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction"
+      ]
+    },
+    {
+      "group": "Project Explanation",
+      "pages": [
+        "roles-responsibilities"
+      ]
+    }
+  ]
+}

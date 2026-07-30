@@ -1,0 +1,66 @@
+---
+title: Introduction
+description: "Welcome to the BookMyShow Backend API documentation."
+---
+
+## Overview
+
+**BookMyShow Backend** is a high-performance, modular NestJS application designed to emulate core ticket booking features. It handles the complete lifecycle of event discovery, venue scheduling, ticket availability, real-time seat locking (seat holds), checkout/booking transactions, and analytical tracking.
+
+### Key Features
+
+*   **User Management & Auth**: Role-based access control (RBAC) separating `USER` and `ADMIN` privileges with secure JWT verification.
+*   **Show Scheduling**: Easily bind events to physical venues with specific dates and times.
+*   **Dynamic Seat Allocation**: Create and configure seating layouts (VIP, Premium, Standard counts and prices) per show.
+*   **Temporal Seat Holds**: Prevents double-booking via a transactional 10-minute temporary seat-locking mechanism.
+*   **Secure Bookings**: Processes ticket checkout within atomic database transactions, clearing holds upon completion.
+*   **Analytics Dashboard**: Insights for admins, showcasing event revenue aggregates and real-time show occupancy percentages.
+
+---
+
+## Tech Stack
+
+The service is constructed using the following core technologies:
+
+*   **Framework**: [NestJS](https://nestjs.com/) (Node.js) - structured, modular framework.
+*   **Database ORM**: [Prisma ORM](https://www.prisma.io/) - type-safe database queries.
+*   **Database**: [PostgreSQL](https://www.postgresql.org/) - reliable relational database.
+*   **Authentication**: [Passport.js](http://www.passportjs.org/) & [JWT](https://jwt.io/) - secure stateless auth.
+*   **Containerization**: [Docker](https://www.docker.com/) & Docker Compose - easy deployment and development environment setup.
+
+---
+
+## Quick Start (Local Setup)
+
+To spin up the server locally on your machine, follow these steps:
+
+### 1. Configure the Environment
+Ensure you have a `.env` file in the root of the project with your PostgreSQL connection URL:
+```env
+DATABASE_URL="postgresql://admin:password123@localhost:5432/bookmyshow?schema=public"
+PORT=3000
+```
+
+### 2. Start PostgreSQL
+If you use Docker, spin up the database container:
+```bash
+docker-compose up -d postgres_db
+```
+
+### 3. Install Dependencies
+```bash
+npm install
+```
+
+### 4. Run Database Migrations
+Synchronize your database schema with the Prisma definition:
+```bash
+npx prisma migrate dev
+```
+
+### 5. Start the Server
+Launch the application in development watch mode:
+```bash
+npm run start:dev
+```
+The server will start listening at `http://localhost:3000`. You can inspect the application routes via the REST client test suite at `api_testing.http`.
