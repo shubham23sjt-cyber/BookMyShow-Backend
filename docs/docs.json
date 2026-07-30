@@ -2,22 +2,49 @@
   "$schema": "https://mintlify.com/docs.json",
   "name": "BookMyShow Backend",
   "theme": "mint",
+  "openapi": "openapi.json",
   "colors": {
-    "primary": "#E50914"
+    "primary": "#E50914",
+    "light": "#FF4D4D",
+    "dark": "#0A0A0C"
+  },
+  "background": {
+    "light": "#F9FAFB",
+    "dark": "#09090B"
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": false
+  },
+  "api": {
+    "playground": {
+      "proxy": false
+    }
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "introduction"
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "booking-flow"
+            ]
+          },
+          {
+            "group": "Project Explanation",
+            "pages": [
+              "roles-responsibilities",
+              "data-models"
+            ]
+          }
         ]
       },
       {
-        "group": "Project Explanation",
-        "pages": [
-          "roles-responsibilities"
-        ]
+        "tab": "API Reference",
+        "openapi": "openapi.json"
       }
     ]
   }

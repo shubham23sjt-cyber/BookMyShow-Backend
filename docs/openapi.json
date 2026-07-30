@@ -1,0 +1,954 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BookMyShow Backend API",
+    "version": "1.0.0",
+    "description": "API documentation for the BookMyShow Backend ticketing and seat-reservation platform."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token (obtained from /auth/login) in the format: `Bearer <token>`"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Jane Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane@gmail.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "userpassword123"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["USER", "ADMIN"],
+            "default": "USER",
+            "example": "USER"
+          }
+        }
+      },
+      "LoginDto": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane@gmail.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "userpassword123"
+          }
+        }
+      },
+      "CreateVenueDto": {
+        "type": "object",
+        "required": ["name", "city", "address"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "PVR Director's Cut"
+          },
+          "city": {
+            "type": "string",
+            "example": "Delhi"
+          },
+          "address": {
+            "type": "string",
+            "example": "Ambience Mall, Vasant Kunj"
+          }
+        }
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "required": ["title", "type"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Inception (Re-Release)"
+          },
+          "description": {
+            "type": "string",
+            "example": "A thief who steals corporate secrets through the use of dream-sharing technology..."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["MOVIE", "CONCERT", "SPORT", "THEATRE"],
+            "example": "MOVIE"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration in minutes",
+            "example": 148
+          }
+        }
+      },
+      "CreateShowDto": {
+        "type": "object",
+        "required": ["eventId", "venueId", "startTime"],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a8a994ef-1f5e-4fa0-b8d1-d24ebf4bfd19"
+          },
+          "venueId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "6d9fb0a9-2fe4-406b-bd85-e35fdb139b4b"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-01T18:30:00.000Z"
+          }
+        }
+      },
+      "GenerateSeatsDto": {
+        "type": "object",
+        "properties": {
+          "vipPrice": {
+            "type": "number",
+            "default": 100.0,
+            "example": 120.0
+          },
+          "premiumPrice": {
+            "type": "number",
+            "default": 75.0,
+            "example": 85.0
+          },
+          "standardPrice": {
+            "type": "number",
+            "default": 50.0,
+            "example": 55.0
+          },
+          "vipCount": {
+            "type": "integer",
+            "default": 10,
+            "example": 10
+          },
+          "premiumCount": {
+            "type": "integer",
+            "default": 10,
+            "example": 20
+          },
+          "standardCount": {
+            "type": "integer",
+            "default": 10,
+            "example": 30
+          }
+        }
+      },
+      "HoldSeatsDto": {
+        "type": "object",
+        "required": ["seatIds"],
+        "properties": {
+          "seatIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["d54b4131-4824-4ba2-8ef9-c73db2f2eb67", "c42f0224-b152-4752-b131-d14fb673dbb1"]
+          }
+        }
+      },
+      "CreateBookingDto": {
+        "type": "object",
+        "required": ["showId", "seatIds"],
+        "properties": {
+          "showId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "4a7139ef-4bfd-4224-ad81-b5ea138efb04"
+          },
+          "seatIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["d54b4131-4824-4ba2-8ef9-c73db2f2eb67", "c42f0224-b152-4752-b131-d14fb673dbb1"]
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new User or Admin",
+        "description": "Creates a new user record. Roles can be USER or ADMIN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. email already exists)."
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login to receive access token",
+        "description": "Authenticates credentials and returns a Bearer JWT access token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully authenticated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOi..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials."
+          }
+        }
+      }
+    },
+    "/venue": {
+      "post": {
+        "tags": ["Venues"],
+        "summary": "Create a Venue",
+        "description": "Registers a new physical theatre or location (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVenueDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Venue created successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      },
+      "get": {
+        "tags": ["Venues"],
+        "summary": "List Venues",
+        "description": "Retrieves all registered venues, optionally filtered by city.",
+        "parameters": [
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter venues by city name (case-insensitive)",
+            "example": "Delhi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of venues."
+          }
+        }
+      }
+    },
+    "/venue/{id}": {
+      "get": {
+        "tags": ["Venues"],
+        "summary": "Get Venue details",
+        "description": "Retrieve specific venue details by its ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The venue UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venue details."
+          },
+          "404": {
+            "description": "Venue not found."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Venues"],
+        "summary": "Delete a Venue",
+        "description": "Removes a venue from the database (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The venue UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Venue deleted successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          },
+          "404": {
+            "description": "Venue not found."
+          }
+        }
+      }
+    },
+    "/event": {
+      "post": {
+        "tags": ["Events"],
+        "summary": "Create an Event",
+        "description": "Registers a new show, movie, or performance (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Event created successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      },
+      "get": {
+        "tags": ["Events"],
+        "summary": "List Events",
+        "description": "Retrieves catalog events with active support for filters, searching, and pagination.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["MOVIE", "CONCERT", "SPORT", "THEATRE"]
+            },
+            "description": "Filter by type of event"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Text search across title and description"
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter events with active shows in this city"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "List events scheduled on or after this ISO date-time"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "List events scheduled on or before this ISO date-time"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page index"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of results per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated events listing."
+          }
+        }
+      }
+    },
+    "/event/{id}": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Get Event details",
+        "description": "Retrieve details of a single event catalog entry.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Event UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event detail object."
+          },
+          "404": {
+            "description": "Event not found."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Events"],
+        "summary": "Delete an Event",
+        "description": "Deletes an event from the catalog (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Event UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event deleted successfully."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          },
+          "404": {
+            "description": "Event not found."
+          }
+        }
+      }
+    },
+    "/show": {
+      "post": {
+        "tags": ["Shows"],
+        "summary": "Schedule/Create a Show",
+        "description": "Schedules an Event at a specific Venue and time (Admin Only). Validates time availability to prevent scheduling conflicts.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShowDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Show scheduled successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. scheduling conflict)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      },
+      "get": {
+        "tags": ["Shows"],
+        "summary": "List all Shows",
+        "description": "Lists all scheduled shows, sorted chronologically descending.",
+        "responses": {
+          "200": {
+            "description": "List of scheduled shows."
+          }
+        }
+      }
+    },
+    "/show/{id}": {
+      "get": {
+        "tags": ["Shows"],
+        "summary": "Get Show details",
+        "description": "Retrieves metadata of a scheduled show.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Show UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Show details."
+          },
+          "404": {
+            "description": "Show not found."
+          }
+        }
+      }
+    },
+    "/show/event/{eventId}": {
+      "get": {
+        "tags": ["Shows"],
+        "summary": "Find Shows by Event",
+        "description": "Finds all scheduled shows for a specific event ID.",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Event UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of shows."
+          }
+        }
+      }
+    },
+    "/show/venue/{venueId}": {
+      "get": {
+        "tags": ["Shows"],
+        "summary": "Find Shows by Venue",
+        "description": "Finds all scheduled shows at a specific venue ID.",
+        "parameters": [
+          {
+            "name": "venueId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Venue UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of shows."
+          }
+        }
+      }
+    },
+    "/seats/{showId}": {
+      "post": {
+        "tags": ["Seats"],
+        "summary": "Generate Seats for a Show",
+        "description": "Generates VIP, Premium, and Standard seats with layout counts and custom pricing (Admin Only). Ensures seats cannot be re-generated if they already exist.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "showId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Show UUID to generate seats for"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateSeatsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Seats generated successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. seats already generated)."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      },
+      "get": {
+        "tags": ["Seats"],
+        "summary": "Get Seating Availability",
+        "description": "Fetches all seats allocated to a show, dynamically indicating booked and held seats. If an authenticated header is passed, it additionally sets `heldByMe` values.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "showId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Show UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of seats with current booking and hold states."
+          }
+        }
+      }
+    },
+    "/seats/hold/{showId}": {
+      "post": {
+        "tags": ["Seats"],
+        "summary": "Temporarily Hold Seats",
+        "description": "Locks the requested seat IDs under the user's account for **10 minutes**. Cleans up general expired holds on execution. Fails if any target seat is already booked or actively held by someone else.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "showId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Show UUID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldSeatsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Seats held successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. seats already booked or held by others)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/booking": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Confirm Booking (Purchase Tickets)",
+        "description": "Completes checkout in a single database transaction. Validates seat availability, checks out currently held seats, calculates prices, and writes confirmation records.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking completed successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. seats held by another user or already booked)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/booking/my-bookings": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "View Bookings History",
+        "description": "Retrieves list of all personal tickets and bookings made by the authenticated user.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user bookings."
+          },
+          "401": {
+            "description": "Unauthorized."
+          }
+        }
+      }
+    },
+    "/booking/{id}": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "Get Booking details",
+        "description": "Fetches receipt details of a specific ticket booking ID.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Booking UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking details."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Booking not found."
+          }
+        }
+      }
+    },
+    "/booking/{id}/cancel": {
+      "delete": {
+        "tags": ["Bookings"],
+        "summary": "Cancel Booking",
+        "description": "Cancels a ticket purchase, releasing seat-booking mappings so seats are available for booking again.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Booking UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking cancelled successfully."
+          },
+          "400": {
+            "description": "Bad Request (e.g. booking already cancelled)."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "404": {
+            "description": "Booking not found."
+          }
+        }
+      }
+    },
+    "/admin/analytics/revenue": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get Revenue Analytics",
+        "description": "Aggregates revenue totals across all confirmed shows and groups them by Event (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revenue data summary."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      }
+    },
+    "/admin/analytics/occupancy": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get Occupancy Analytics",
+        "description": "Calculates seat capacities and percentage occupancy rates for all scheduled shows (Admin Only).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Show occupancy percentage aggregates."
+          },
+          "401": {
+            "description": "Unauthorized."
+          },
+          "403": {
+            "description": "Forbidden (Requires ADMIN role)."
+          }
+        }
+      }
+    }
+  }
+}

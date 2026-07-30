@@ -1,0 +1,187 @@
+---
+title: Interactive API Guide
+description: "Follow the step-by-step walkthrough to run the end-to-end user and admin workflows."
+---
+
+To help you understand and test the system, here is the complete API lifecycle divided into three main phases. 
+
+---
+
+<Steps>
+
+  <Step title="Authentication & Role Selection" icon="user-shield">
+    Before sending requests to protected resources, you must create an account and authenticate.
+    
+    <Tabs>
+      <Tab title="1a. Register Account">
+        Send a `POST` request to `/auth/register` to create a user or admin account.
+
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/auth/register \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "name": "Super Admin",
+            "email": "admin@bookmyshow.com",
+            "password": "securepassword123",
+            "role": "ADMIN"
+          }'
+        ```
+      </Tab>
+      <Tab title="1b. Login & Get Token">
+        Send a `POST` request to `/auth/login` to obtain your JWT session token.
+
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/auth/login \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "email": "admin@bookmyshow.com",
+            "password": "securepassword123"
+          }'
+        ```
+        
+        > [!IMPORTANT]
+        > Copy the `accessToken` returned from this response. You must paste it into the **Authorization header** (as `Bearer <your_token>`) for all subsequent Admin or User requests.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Admin Resource Provisioning" icon="folder-plus">
+    Next, log in as an `ADMIN` and build the theatre schedule. The items must be created in this specific sequence:
+
+    <Tabs>
+      <Tab title="2a. Create Venue">
+        First, register a physical theatre location.
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/venue \
+          --header 'Authorization: Bearer <ADMIN_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "name": "PVR Director'\''s Cut",
+            "city": "Delhi",
+            "address": "Ambience Mall, Vasant Kunj"
+          }'
+        ```
+        *Save the returned `id` as your **`venueId`**.*
+      </Tab>
+      
+      <Tab title="2b. Create Event">
+        Register the movie or show.
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/event \
+          --header 'Authorization: Bearer <ADMIN_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "title": "Inception (Re-Release)",
+            "description": "A thief who steals corporate secrets...",
+            "type": "MOVIE",
+            "duration": 148
+          }'
+        ```
+        *Save the returned `id` as your **`eventId`**.*
+      </Tab>
+      
+      <Tab title="2c. Schedule Show">
+        Schedule the show, linking the Movie (`eventId`) and the Theatre (`venueId`) at a specific date and time.
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/show \
+          --header 'Authorization: Bearer <ADMIN_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "eventId": "<eventId>",
+            "venueId": "<venueId>",
+            "startTime": "2026-06-01T18:30:00.000Z"
+          }'
+        ```
+        *Save the returned `id` as your **`showId`**.*
+      </Tab>
+      
+      <Tab title="2d. Generate Seats">
+        Generate the seat grid for this show with pricing details.
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/seats/<showId> \
+          --header 'Authorization: Bearer <ADMIN_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "vipPrice": 120.0,
+            "premiumPrice": 85.0,
+            "standardPrice": 55.0,
+            "vipCount": 10,
+            "premiumCount": 20,
+            "standardCount": 30
+          }'
+        ```
+        *This will generate 60 seats (prefixed V1-10, P1-20, S1-30) for your show.*
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Customer Booking Flow" icon="cart-shopping">
+    Once the show is scheduled and seats are generated, standard customers can browse, hold, and purchase tickets:
+
+    <Tabs>
+      <Tab title="3a. Fetch Seat Map">
+        Get the live layout map of the hall. This returns seat IDs and indicates if they are booked or held.
+        
+        ```bash
+        curl --request GET \
+          --url http://localhost:3001/seats/<showId> \
+          --header 'Authorization: Bearer <USER_JWT_TOKEN>'
+        ```
+        *Pick two seat IDs from the response (e.g. `seatId1`, `seatId2`).*
+      </Tab>
+      
+      <Tab title="3b. Hold Seats">
+        Lock the seats for **10 minutes** so other users cannot checkout the same seats.
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/seats/hold/<showId> \
+          --header 'Authorization: Bearer <USER_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "seatIds": ["<seatId1>", "<seatId2>"]
+          }'
+        ```
+        > [!TIP]
+        > The backend sets a lock that will auto-expire after 10 minutes if you do not complete Step 3c.
+      </Tab>
+      
+      <Tab title="3c. Confirm Booking">
+        Check out and purchase the tickets. 
+        
+        ```bash
+        curl --request POST \
+          --url http://localhost:3001/booking \
+          --header 'Authorization: Bearer <USER_JWT_TOKEN>' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "showId": "<showId>",
+            "seatIds": ["<seatId1>", "<seatId2>"]
+          }'
+        ```
+        *This executes inside a database transaction, clearing the holds and confirming your seats.*
+      </Tab>
+      
+      <Tab title="3d. Cancel Booking">
+        If needed, you can cancel your confirmed booking to release the seats.
+        
+        ```bash
+        curl --request DELETE \
+          --url http://localhost:3001/booking/<bookingId>/cancel \
+          --header 'Authorization: Bearer <USER_JWT_TOKEN>'
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+</Steps>
