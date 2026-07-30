@@ -5,18 +5,20 @@
   "colors": {
     "primary": "#E50914"
   },
-  "navigation": [
-    {
-      "group": "Getting Started",
-      "pages": [
-        "introduction"
-      ]
-    },
-    {
-      "group": "Project Explanation",
-      "pages": [
-        "roles-responsibilities"
-      ]
-    }
-  ]
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "introduction"
+        ]
+      },
+      {
+        "group": "Project Explanation",
+        "pages": [
+          "roles-responsibilities"
+        ]
+      }
+    ]
+  }
 }
