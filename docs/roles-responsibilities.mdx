@@ -36,36 +36,44 @@ The application's architecture is segmented into dedicated modules, each holding
          └──────────────────┘        └──────────────────┘
 ```
 
-### A. Authentication Module (`src/auth`)
-*   **Registration**: Creates new users, hashing passwords via `bcrypt` (10 salt rounds) before database persistence.
-*   **Authentication**: Validates user credentials and issues a stateless JSON Web Token (JWT) expiring in 24 hours.
+<AccordionGroup>
+  <Accordion title="Authentication Module (src/auth)" icon="shield-check">
+    *   **Registration**: Creates new users, hashing passwords via `bcrypt` (10 salt rounds) before database persistence.
+    *   **Authentication**: Validates credentials (email & password) and issues a stateless JSON Web Token (JWT) expiring in 24 hours.
+  </Accordion>
 
-### B. Seats Module (`src/seats`)
-*   **Seat Generation (Admin)**: Generates seats for a given show according to customized pricing and count configurations.
-    *   *VIP Seats*: Prefixed with `V` (e.g., `V1`, `V2`).
-    *   *Premium Seats*: Prefixed with `P` (e.g., `P1`, `P2`).
-    *   *Standard Seats*: Prefixed with `S` (e.g., `S1`, `S2`).
-*   **Seat Map Lookup (Public/User)**: Fetches the seating chart for a show. It dynamically determines whether seats are:
-    *   `isBooked`: Confirmed booked in the database.
-    *   `isHeld`: Reserved temporarily by another user.
-    *   `heldByMe`: Reserved temporarily by the current querying user.
-*   **Seat Holds**: Locks selected seat IDs for the calling user for a duration of **10 minutes** to secure them during payment/checkout. Automatically cleans up expired holds prior to listing or updating seats.
+  <Accordion title="Seats Module (src/seats)" icon="chair">
+    *   **Seat Generation (Admin)**: Generates seats for a given show according to customized pricing and count configurations.
+        *   *VIP Seats*: Prefixed with `V` (e.g., `V1`, `V2`).
+        *   *Premium Seats*: Prefixed with `P` (e.g., `P1`, `P2`).
+        *   *Standard Seats*: Prefixed with `S` (e.g., `S1`, `S2`).
+    *   **Seat Map Lookup (Public/User)**: Fetches the seating chart for a show. It dynamically determines whether seats are:
+        *   `isBooked`: Confirmed booked in the database.
+        *   `isHeld`: Reserved temporarily by another user.
+        *   `heldByMe`: Reserved temporarily by the current querying user.
+    *   **Seat Holds**: Locks selected seat IDs for the calling user for a duration of **10 minutes** to secure them during payment/checkout. Automatically cleans up expired holds prior to listing or updating seats.
+  </Accordion>
 
-### C. Booking Module (`src/booking`)
-*   **Transactional Ticket Booking**: Processes checkouts securely inside a database `$transaction` to maintain ACID compliance:
-    1.  Validates that all requested seats exist and belong to the correct show.
-    2.  Verifies seats are not already booked or currently held by another user.
-    3.  Calculates total pricing.
-    4.  Creates a new booking record (marked `CONFIRMED`).
-    5.  Associates seats with the booking.
-    6.  Releases the temporary seat holds.
-*   **Cancellations**: Cancels active bookings, removing seat-booking associations so they can be selected again by other users.
+  <Accordion title="Booking Module (src/booking)" icon="ticket">
+    *   **Transactional Ticket Booking**: Processes checkouts securely inside a database `$transaction` to maintain ACID compliance:
+        1.  Validates that all requested seats exist and belong to the correct show.
+        2.  Verifies seats are not already booked or currently held by another user.
+        3.  Calculates total pricing.
+        4.  Creates a new booking record (marked `CONFIRMED`).
+        5.  Associates seats with the booking.
+        6.  Releases the temporary seat holds.
+    *   **Cancellations**: Cancels active bookings, removing seat-booking associations so they can be selected again by other users.
+  </Accordion>
 
-### D. Inventory Modules (`src/event`, `src/venue`, `src/show`)
-*   **Event**: Manages content catalogs (e.g., Movie titles, duration, event type).
-*   **Venue**: Registers physical properties (cinemas, halls) including locations and addresses.
-*   **Show**: Schedules specific dates and times when an Event will run at a Venue. Prevents double-scheduling at the same venue and time.
+  <Accordion title="Inventory Modules (src/event, src/venue, src/show)" icon="calendar-days">
+    *   **Event**: Manages content catalogs (e.g., Movie titles, duration, event type).
+    *   **Venue**: Registers physical properties (cinemas, halls) including locations and addresses.
+    *   **Show**: Schedules specific dates and times when an Event will run at a Venue. Prevents double-scheduling at the same venue and time.
+  </Accordion>
 
-### E. Admin & Analytics Module (`src/admin`)
-*   **Revenue Analytics**: Sums up the prices of all `CONFIRMED` bookings grouped by Event.
-*   **Occupancy Analytics**: Computes show-by-show seat capacity and percentage occupancy rates.
+  <Accordion title="Admin & Analytics Module (src/admin)" icon="chart-mixed">
+    *   **Revenue Analytics**: Sums up the prices of all `CONFIRMED` bookings grouped by Event.
+    *   **Occupancy Analytics**: Computes show-by-show seat capacity and percentage occupancy rates.
+  </Accordion>
+</AccordionGroup>
+

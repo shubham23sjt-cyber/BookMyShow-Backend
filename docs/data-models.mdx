@@ -1,0 +1,161 @@
+---
+title: Database Schemas & Data Models
+description: "Understand the core data structures and relational entities powering the ticketing engine."
+---
+
+The application utilizes a PostgreSQL database modeled with Prisma. Below are the key data models and schemas defined in the system.
+
+---
+
+## 1. Core Models
+
+### User Schema
+Represents customers and administrators who interact with the system.
+
+<ResponseField name="User Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Unique UUID identifier for the user.
+    </ResponseField>
+    <ResponseField name="email" type="string" required>
+      Unique email address used for login authentication.
+    </ResponseField>
+    <ResponseField name="password" type="string" required>
+      Bcrypt hashed password. Never returned in API response bodies.
+    </ResponseField>
+    <ResponseField name="name" type="string" required>
+      Full name of the user.
+    </ResponseField>
+    <ResponseField name="role" type="enum" required>
+      Access level controls. Can be `USER` or `ADMIN`.
+    </ResponseField>
+    <ResponseField name="createdAt" type="dateTime">
+      Timestamp when the account was registered.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Event Schema
+Represents the show catalogue items (e.g. movies, plays, concerts).
+
+<ResponseField name="Event Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Unique UUID catalog key.
+    </ResponseField>
+    <ResponseField name="title" type="string" required>
+      The name of the movie or concert.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Synopsis or details of the performance.
+    </ResponseField>
+    <ResponseField name="type" type="enum" required>
+      Type of performance. Options: `MOVIE`, `CONCERT`, `THEATRE`.
+    </ResponseField>
+    <ResponseField name="duration" type="int" required>
+      Running length of the event in minutes.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Show Schema
+Schedules an Event at a specific Venue at a set date/time.
+
+<ResponseField name="Show Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Unique UUID scheduled identifier.
+    </ResponseField>
+    <ResponseField name="eventId" type="string" required>
+      Foreign key pointing to the target movie/event.
+    </ResponseField>
+    <ResponseField name="venueId" type="string" required>
+      Foreign key pointing to the physical theater venue.
+    </ResponseField>
+    <ResponseField name="startTime" type="dateTime" required>
+      The date and time when the show will begin.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## 2. Seating & Transactional Models
+
+### Seat Schema
+Individual physical seats tied to a scheduled show. Pricing is calculated dynamically.
+
+<ResponseField name="Seat Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Unique UUID seat key.
+    </ResponseField>
+    <ResponseField name="showId" type="string" required>
+      Foreign key linking to the parent scheduled Show.
+    </ResponseField>
+    <ResponseField name="row" type="string" required>
+      Row label in the hall (e.g. `A`, `B`, `C`).
+    </ResponseField>
+    <ResponseField name="number" type="int" required>
+      Seat number within the row (e.g. `5`, `6`).
+    </ResponseField>
+    <ResponseField name="type" type="enum" required>
+      Category tier. Options: `VIP`, `PREMIUM`, `STANDARD`.
+    </ResponseField>
+    <ResponseField name="price" type="decimal" required>
+      The cost of the ticket. Overwritten based on show tier counts.
+    </ResponseField>
+    <ResponseField name="isBooked" type="boolean" default="false">
+      Indicates if a customer has successfully completed a booking for this seat.
+    </ResponseField>
+    <ResponseField name="isHeld" type="boolean" default="false">
+      Indicates if this seat is currently locked under a temporary 10-minute hold.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### SeatHold Schema
+Locks seats temporarily during customer checkouts.
+
+<ResponseField name="SeatHold Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Unique hold reservation ID.
+    </ResponseField>
+    <ResponseField name="userId" type="string" required>
+      The customer holding the seats.
+    </ResponseField>
+    <ResponseField name="showId" type="string" required>
+      Target scheduled show.
+    </ResponseField>
+    <ResponseField name="seatId" type="string" required>
+      Target physical seat locked.
+    </ResponseField>
+    <ResponseField name="expiresAt" type="dateTime" required>
+      Timestamp when the hold expires (set exactly to **10 minutes** from creation).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Booking Schema
+A finalized ticket order containing seats and total paid.
+
+<ResponseField name="Booking Model" type="object">
+  <Expandable title="fields">
+    <ResponseField name="id" type="string" required>
+      Receipt UUID identifier.
+    </ResponseField>
+    <ResponseField name="userId" type="string" required>
+      The customer who purchased the tickets.
+    </ResponseField>
+    <ResponseField name="showId" type="string" required>
+      Target scheduled show.
+    </ResponseField>
+    <ResponseField name="status" type="enum" default="CONFIRMED">
+      Current ticket state. Can be `CONFIRMED` or `CANCELLED`.
+    </ResponseField>
+    <ResponseField name="totalPrice" type="decimal" required>
+      Aggregated price of all seats booked in this order.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
